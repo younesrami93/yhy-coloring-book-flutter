@@ -1,0 +1,48 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../api/auth_service.dart';
+import '../models/user_model.dart';
+
+final authProvider = StateNotifierProvider<AuthNotifier, User?>((ref) {
+  return AuthNotifier();
+});
+
+class AuthNotifier extends StateNotifier<User?> {
+  AuthNotifier() : super(null);
+
+  final _authService = AuthService();
+
+  /// Checks if a token exists in local storage
+  Future<bool> checkLoginStatus() async {
+    final token = await _authService.getToken();
+
+    if (token != null && token.isNotEmpty) {
+      // We found a token! Restore a basic user session.
+      // (In a real app, you would verify this token with the API here)
+      state = User(
+          id: "cached-id",
+          name: "Welcome Back",
+          email: "",
+          credits: 0,
+          token: token
+      );
+      return true; // Logged in
+    }
+
+    state = null;
+    return false; // Not logged in
+  }
+
+  Future<bool> loginGuest() async {
+    final user = await _authService.loginAsGuest();
+    if (user != null) {
+      state = user;
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> logout() async {
+    await _authService.logout();
+    state = null;
+  }
+}

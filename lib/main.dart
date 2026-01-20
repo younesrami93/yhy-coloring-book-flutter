@@ -1,0 +1,51 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:yhy_coloring_book_flutter/l10n/app_localizations.dart';
+import 'package:yhy_coloring_book_flutter/screens/login_screen.dart';
+import 'package:yhy_coloring_book_flutter/screens/splash_screen.dart';
+import 'l10n/app_localizations_en.dart';
+import 'theme.dart';
+import 'core/app_state.dart';
+
+void main() {
+  runApp(const ProviderScope(child: MyApp()));
+}
+
+class MyApp extends ConsumerWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch the providers to rebuild when they change
+    final themeMode = ref.watch(themeProvider);
+    final locale = ref.watch(localeProvider);
+
+    return MaterialApp(
+      title: 'Coloring AI',
+      debugShowCheckedModeBanner: false,
+
+      // Theme Configuration
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
+
+      // Localization Configuration
+      locale: locale,
+      localizationsDelegates:  [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en'), // English
+        Locale('fr'), // French
+        // Add 'ar' here later
+      ],
+
+      // Temporary Home Screen to test
+      home: const SplashScreen(),
+    );
+  }
+}
