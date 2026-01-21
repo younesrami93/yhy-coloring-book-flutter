@@ -32,6 +32,17 @@ class AuthNotifier extends StateNotifier<User?> {
     return false; // Not logged in
   }
 
+  Future<void> refreshUser() async {
+    if (state == null) return; // Don't refresh if not logged in
+
+    final updatedUser = await _authService.getUserData();
+    if (updatedUser != null) {
+      state = updatedUser; // This triggers the UI update automatically
+    }
+  }
+
+
+
   Future<bool> loginGuest() async {
     final user = await _authService.loginAsGuest();
     if (user != null) {
@@ -39,6 +50,12 @@ class AuthNotifier extends StateNotifier<User?> {
       return true;
     }
     return false;
+  }
+
+  void updateCredits(int newCredits) {
+    if (state != null) {
+      state = state!.copyWith(credits: newCredits);
+    }
   }
 
   Future<void> logout() async {

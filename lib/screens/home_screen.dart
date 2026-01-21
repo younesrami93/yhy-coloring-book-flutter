@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/auth_provider.dart';
+import '../core/auth_provider.dart'; // Ensure this has the refreshUser method
 import '../widgets/credit_badge.dart';
 import '../widgets/sleek_bottom_nav.dart';
-import '../providers/generations_provider.dart'; // <--- Import this
+import '../providers/generations_provider.dart';
 
 // Import Tabs
 import 'tabs/home_tab.dart';
@@ -12,11 +12,29 @@ import 'tabs/settings_tab.dart';
 
 final bottomNavIndexProvider = StateProvider<int>((ref) => 0);
 
-class HomeScreen extends ConsumerWidget {
+// CHANGED: Converted to ConsumerStatefulWidget to handle initState
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+
+  @override
+  void initState() {
+    super.initState();
+    // 1. FETCH FRESH DATA ON LOAD
+    // This ensures we have the correct credit balance from the server immediately
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(authProvider.notifier).refreshUser();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // This automatically rebuilds whenever authProvider updates (e.g. credits change)
     final user = ref.watch(authProvider);
     final currentIndex = ref.watch(bottomNavIndexProvider);
     final theme = Theme.of(context);
@@ -48,6 +66,7 @@ class HomeScreen extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    // Profile Section
                     Row(
                       children: [
                         Container(
@@ -93,11 +112,15 @@ class HomeScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
+
+                    // Credit Badge (Updates automatically via ref.watch)
                     CreditBadge(
                       credits: user?.credits ?? 0,
                       onTap: () {
+                        // Optional: Refresh manually on tap
+                        ref.read(authProvider.notifier).refreshUser();
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Open Store")),
+                          const SnackBar(content: Text("Refreshing credits...")),
                         );
                       },
                     ),
@@ -134,13 +157,15 @@ class HomeScreen extends ConsumerWidget {
               SleekBottomNav(
                 currentIndex: currentIndex,
                 onTap: (index) {
-                  // 1. Update the tab index
                   ref.read(bottomNavIndexProvider.notifier).state = index;
 
-                  // 2. CHECK: If switching to History (Index 1), trigger refresh
+                  // 2. SMART REFRESH
+                  // When switching to History, refresh history list
                   if (index == 1) {
                     ref.read(generationsProvider.notifier).refresh();
                   }
+                  // When switching to Home (or any tab), refreshing user data is good practice
+                  ref.read(authProvider.notifier).refreshUser();
                 },
               ),
             ],

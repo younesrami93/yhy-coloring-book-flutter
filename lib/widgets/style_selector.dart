@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../models/style_model.dart';
 import '../theme.dart';
@@ -46,8 +47,8 @@ class StyleSelector extends StatelessWidget {
                         ? Border.all(color: AppTheme.electricBlue, width: 3)
                         : Border.all(
                       // Subtle grey border for unselected items
-                      color: theme.colorScheme.outline.withOpacity(0.2),
-                      width: 1.5,
+                      color: theme.colorScheme.primary.withOpacity(0.2),
+                      width: 2,
                     ),
 
                     boxShadow: [
@@ -59,7 +60,7 @@ class StyleSelector extends StatelessWidget {
                         )
                     ],
                     image: DecorationImage(
-                      image: NetworkImage(style.thumbnailUrl),
+                      image: CachedNetworkImageProvider(style.thumbnailUrl),
                       fit: BoxFit.cover,
                     ),
                   ),

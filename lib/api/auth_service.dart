@@ -14,6 +14,23 @@ class AuthService {
   static const String _tokenKey = 'auth_token';
   static const String _deviceUuidKey = 'device_uuid';
 
+
+  Future<User?> getUserData() async {
+    try {
+      final response = await _client.get('user/me');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final userMap = data['user'];
+        final token = await getToken();
+        return User.fromJson(userMap, token: token);
+      }
+    } catch (e) {
+      print('Error fetching user data: $e');
+    }
+    return null;
+  }
+
+
   Future<User?> loginAsGuest() async {
     try {
       final deviceData = await _getDevicePayload();

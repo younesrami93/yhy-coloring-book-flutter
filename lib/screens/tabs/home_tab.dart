@@ -1,31 +1,29 @@
 import 'dart:convert';
-import 'dart:io'; // Required for File
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:image_picker/image_picker.dart'; // Required for picking images
+import 'package:image_picker/image_picker.dart';
 
 import '../../models/style_model.dart';
 import '../../providers/styles_provider.dart';
 import '../../theme.dart';
 import '../../widgets/style_selector.dart';
+import '../../core/auth_provider.dart';
+import '../../widgets/generation_success_dialog.dart'; // <--- Import New Widget
 
-// --- LOCAL STATE PROVIDERS ---
 final selectedStyleProvider = StateProvider<int?>((ref) => null);
-
-// Changed to hold the actual File object instead of a boolean
 final selectedImageProvider = StateProvider<File?>((ref) => null);
 
 class HomeTab extends ConsumerWidget {
   const HomeTab({super.key});
 
-  // Helper method to pick image
   Future<void> _pickImage(WidgetRef ref, ImageSource source) async {
     final picker = ImagePicker();
     try {
       final XFile? pickedFile = await picker.pickImage(
         source: source,
-        maxWidth: 1024, // Resize for performance
+        maxWidth: 1024,
         imageQuality: 85,
       );
 
@@ -39,12 +37,16 @@ class HomeTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // ... [Use the exact same UI build code as before. No changes needed here] ...
+    // For brevity, I am not pasting the UI scaffold again, just the Logic below.
+    // If you need the full UI code again, let me know, but it is unchanged.
+
+    // Copy/Paste your existing build method here.
     final theme = Theme.of(context);
     final selectedStyleId = ref.watch(selectedStyleProvider);
     final selectedImage = ref.watch(selectedImageProvider);
     final stylesAsyncValue = ref.watch(stylesProvider);
 
-    // Ready if we have both an image and a style
     final bool isReady = selectedImage != null && selectedStyleId != null;
 
     return Stack(
@@ -56,8 +58,7 @@ class HomeTab extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 24),
-
-              // A. Header Text
+              // Header
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Text(
@@ -77,10 +78,9 @@ class HomeTab extends ConsumerWidget {
                   ),
                 ),
               ),
-
               const SizedBox(height: 24),
 
-              // B. Image Picker Area
+              // Image Picker
               GestureDetector(
                 onTap: () => _showImageSourceModal(context, ref),
                 child: AnimatedContainer(
@@ -145,7 +145,7 @@ class HomeTab extends ConsumerWidget {
 
               const SizedBox(height: 32),
 
-              // C. Style Section
+              // Style Header
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Row(
@@ -166,7 +166,7 @@ class HomeTab extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
-              // D. Style Selector
+              // Style Selector
               stylesAsyncValue.when(
                 data: (styles) {
                   return StyleSelector(
@@ -191,7 +191,7 @@ class HomeTab extends ConsumerWidget {
           ),
         ),
 
-        // --- FLOATING ACTION BUTTON ---
+        // FAB
         Positioned(
           left: 24,
           right: 24,
@@ -249,7 +249,6 @@ class HomeTab extends ConsumerWidget {
     );
   }
 
-  // Helper to choose Camera or Gallery
   void _showImageSourceModal(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
@@ -280,6 +279,7 @@ class HomeTab extends ConsumerWidget {
     );
   }
 
+  // --- UPDATED GENERATION LOGIC ---
   Future<void> _handleGenerate(BuildContext context, WidgetRef ref) async {
     final selectedStyleId = ref.read(selectedStyleProvider);
     final selectedImage = ref.read(selectedImageProvider);
@@ -287,7 +287,10 @@ class HomeTab extends ConsumerWidget {
 
     if (selectedStyleId == null || selectedImage == null) return;
 
-    // 1. Show Loading Indicator
+    // 1. CAPTURE OLD CREDITS
+    // We grab the value BEFORE the API call
+    final oldCredits = ref.read(authProvider)?.credits ?? 0;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -295,81 +298,66 @@ class HomeTab extends ConsumerWidget {
     );
 
     try {
-      // 2. Call the API
       final response = await client.postMultipart(
         'generate',
         file: selectedImage,
         fileField: 'image',
         fields: {
           'style_id': selectedStyleId.toString(),
-          // 'prompt': 'optional custom prompt here',
         },
       );
 
-      // Close loading dialog
       if (context.mounted) Navigator.pop(context);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        // 3. SUCCESS
-        // Clear state if desired
+        final data = jsonDecode(response.body);
+        final remainingCredits = data['remaining_credits'];
+
+        // 2. UPDATE PROVIDER
+        // This makes the UI (e.g. Header Badge) update instantly
+        if (remainingCredits != null && remainingCredits is int) {
+          ref.read(authProvider.notifier).updateCredits(remainingCredits);
+        }
+
+        // Clear UI
         ref.read(selectedImageProvider.notifier).state = null;
         ref.read(selectedStyleProvider.notifier).state = null;
 
+        // 3. SHOW DIALOG WITH ANIMATION
         if (context.mounted) {
-          _showSuccessDialog(context);
+          showDialog(
+            context: context,
+            barrierColor: Colors.black.withOpacity(0.6),
+            builder: (_) => GenerationSuccessDialog(
+              oldCredits: oldCredits,           // e.g. 6
+              newCredits: remainingCredits ?? (oldCredits - 1), // e.g. 5
+            ),
+          );
         }
       } else if (response.statusCode == 402) {
-        // 4. Insufficient Credits
         final msg = jsonDecode(response.body)['message'] ?? "Insufficient credits";
+        ref.read(authProvider.notifier).refreshUser();
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(msg),
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.errorRed,
             action: SnackBarAction(label: "Buy", onPressed: () {}),
           ));
         }
       } else {
-        // 5. Other Error
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text("Error: ${response.statusCode}. Please try again."),
+            content: Text("Error: ${response.statusCode}"),
           ));
         }
       }
     } catch (e) {
       if (context.mounted) {
-        Navigator.pop(context); // Close loading if error
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Connection error: $e")),
         );
       }
     }
-  }
-
-  void _showSuccessDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.green),
-            SizedBox(width: 8),
-            Text("Started!"),
-          ],
-        ),
-        content: const Text(
-          "Your image is being processed. This usually takes about 10 seconds.\n\n"
-              "We'll send you a notification when it's ready!",
-          style: TextStyle(fontSize: 16),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("Awesome"),
-          )
-        ],
-      ),
-    );
   }
 }
