@@ -1,7 +1,8 @@
 import 'dart:convert';
+import 'dart:io'; // <--- Added for File
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/foundation.dart'; // For debugPrint
+import 'package:flutter/foundation.dart';
 import 'package:yhy_coloring_book_flutter/models/style_model.dart';
 import '../core/api_constants.dart';
 
@@ -19,15 +20,15 @@ class ApiClient {
       return response;
     } catch (e) {
       _logError(url, e);
-      rethrow; // Pass the error up to the Service to handle
+      rethrow;
     }
   }
 
-  // 2. Centralized POST Request
+  // 2. Centralized POST Request (JSON)
   Future<http.Response> post(
-    String endpoint, {
-    Map<String, dynamic>? body,
-  }) async {
+      String endpoint, {
+        Map<String, dynamic>? body,
+      }) async {
     final url = Uri.parse('${ApiConstants.baseUrl}/$endpoint');
     final headers = await _getHeaders();
 
@@ -47,15 +48,55 @@ class ApiClient {
     }
   }
 
-  // 3. Unified Headers (The Magic Part)
+  // 3. NEW: Centralized Multipart Request (File Uploads)
+  Future<http.Response> postMultipart(
+      String endpoint, {
+        required File file,
+        required String fileField, // e.g. 'image'
+        Map<String, String>? fields, // e.g. {'style_id': '1'}
+      }) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/$endpoint');
+    final request = http.MultipartRequest('POST', url);
+
+    // Add Headers
+    final headers = await _getHeaders();
+    request.headers.addAll(headers);
+    // NOTE: Do NOT set Content-Type manually for multipart; the request handles it (boundary)
+    request.headers.remove('Content-Type');
+
+    // Add Text Fields
+    if (fields != null) {
+      request.fields.addAll(fields);
+    }
+
+    // Add File
+    final multipartFile = await http.MultipartFile.fromPath(
+      fileField,
+      file.path,
+    );
+    request.files.add(multipartFile);
+
+    _logRequest('MULTIPART POST', url, headers, fields);
+
+    try {
+      final streamedResponse = await request.send();
+      // Convert stream back to standard Response to easy parsing/logging
+      final response = await http.Response.fromStream(streamedResponse);
+      _logResponse(url, response);
+      return response;
+    } catch (e) {
+      _logError(url, e);
+      rethrow;
+    }
+  }
+
+  // 4. Unified Headers
   Future<Map<String, String>> _getHeaders() async {
-    // Standard headers for Laravel Sanctum
     final Map<String, String> headers = {
       "Content-Type": "application/json",
       "Accept": "application/json",
     };
 
-    // Automatically add the Token if we have one
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
 
@@ -67,38 +108,28 @@ class ApiClient {
   }
 
   Future<List<StyleModel>> fetchStyles() async {
-    // We reuse your existing generic 'get' method
     final response = await get('styles');
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
       final List<dynamic> data = jsonResponse['data'];
-
       return data.map((e) => StyleModel.fromJson(e)).toList();
     } else {
       throw Exception('Failed to load styles: ${response.statusCode}');
     }
   }
 
-  // --- Logging Helpers (Clean Debugging) ---
-
-  void _logRequest(
-    String method,
-    Uri url,
-    Map<String, String> headers, [
-    dynamic body,
-  ]) {
+  // --- Logging Helpers ---
+  void _logRequest(String method, Uri url, Map<String, String> headers, [dynamic body]) {
     if (kDebugMode) {
       print('🔵 [API Request] $method: $url');
-      // print('   Headers: $headers'); // Uncomment if you need to debug headers
       if (body != null) print('   Body: $body');
     }
   }
 
   void _logResponse(Uri url, http.Response response) {
     if (kDebugMode) {
-      final statusEmoji =
-          response.statusCode >= 200 && response.statusCode < 300 ? '🟢' : '🔴';
+      final statusEmoji = response.statusCode >= 200 && response.statusCode < 300 ? '🟢' : '🔴';
       print('$statusEmoji [API Response] ${response.statusCode}: $url');
       print('   Response: ${response.body}');
     }

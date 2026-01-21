@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/auth_provider.dart';
 import '../widgets/credit_badge.dart';
 import '../widgets/sleek_bottom_nav.dart';
+import '../providers/generations_provider.dart'; // <--- Import this
 
 // Import Tabs
 import 'tabs/home_tab.dart';
@@ -26,30 +27,19 @@ class HomeScreen extends ConsumerWidget {
       SettingsTab(),
     ];
 
-    // Colors for the card "Sheet" effect
-    final Color innerBodyColor = theme.colorScheme.surface;
-
     return Scaffold(
-      // We remove the solid backgroundColor so our Container gradient shows
       body: Container(
-        // --- 1. MESH GRADIENT BACKGROUND ---
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: theme.brightness == Brightness.light
-                ? [
-              const Color(0xFFDCE6F5), // Light Blue Top
-              const Color(0xFFF0F3F8), // Grey Bottom
-            ]
-                : [
-              const Color(0xFF0F141E), // Deep Blue Top
-              const Color(0xFF0A0E17), // Black Bottom
-            ],
+                ? [const Color(0xFFDCE6F5), const Color(0xFFF0F3F8)]
+                : [const Color(0xFF0F141E), const Color(0xFF0A0E17)],
           ),
         ),
         child: SafeArea(
-          bottom: false, // We let the gradient go behind the nav bar
+          bottom: false,
           child: Column(
             children: [
               // --- TOP BAR ---
@@ -58,7 +48,6 @@ class HomeScreen extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Profile Section
                     Row(
                       children: [
                         Container(
@@ -67,14 +56,15 @@ class HomeScreen extends ConsumerWidget {
                             shape: BoxShape.circle,
                             border: Border.all(
                                 color: theme.colorScheme.primary.withOpacity(0.5),
-                                width: 2
-                            ),
+                                width: 2),
                           ),
                           child: CircleAvatar(
                             radius: 20,
                             backgroundColor: theme.colorScheme.surface,
                             child: Text(
-                              user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : "G",
+                              user?.name.isNotEmpty == true
+                                  ? user!.name[0].toUpperCase()
+                                  : "G",
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: theme.colorScheme.primary,
@@ -103,8 +93,6 @@ class HomeScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
-
-                    // Credit Badge
                     CreditBadge(
                       credits: user?.credits ?? 0,
                       onTap: () {
@@ -122,7 +110,7 @@ class HomeScreen extends ConsumerWidget {
                 child: Container(
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
-                    color: innerBodyColor,
+                    color: theme.colorScheme.surface,
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(32),
                       bottom: Radius.circular(32),
@@ -146,7 +134,13 @@ class HomeScreen extends ConsumerWidget {
               SleekBottomNav(
                 currentIndex: currentIndex,
                 onTap: (index) {
+                  // 1. Update the tab index
                   ref.read(bottomNavIndexProvider.notifier).state = index;
+
+                  // 2. CHECK: If switching to History (Index 1), trigger refresh
+                  if (index == 1) {
+                    ref.read(generationsProvider.notifier).refresh();
+                  }
                 },
               ),
             ],

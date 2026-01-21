@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:yhy_coloring_book_flutter/widgets/before_after_slider.dart';
 import '../theme.dart';
-import '../widgets/before_after_slider.dart';
 
 class ResultScreen extends StatelessWidget {
   const ResultScreen({super.key});
