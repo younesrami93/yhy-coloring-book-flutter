@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:yhy_coloring_book_flutter/widgets/generation_error_dialog.dart';
+import 'package:yhy_coloring_book_flutter/widgets/generation_loading_dialog.dart';
+import 'package:yhy_coloring_book_flutter/widgets/insufficient_credits_dialog.dart';
 
 import '../../models/style_model.dart';
 import '../../providers/styles_provider.dart';
@@ -280,6 +283,7 @@ class HomeTab extends ConsumerWidget {
   }
 
   // --- UPDATED GENERATION LOGIC ---
+
   Future<void> _handleGenerate(BuildContext context, WidgetRef ref) async {
     final selectedStyleId = ref.read(selectedStyleProvider);
     final selectedImage = ref.read(selectedImageProvider);
@@ -288,13 +292,13 @@ class HomeTab extends ConsumerWidget {
     if (selectedStyleId == null || selectedImage == null) return;
 
     // 1. CAPTURE OLD CREDITS
-    // We grab the value BEFORE the API call
     final oldCredits = ref.read(authProvider)?.credits ?? 0;
 
+    // 2. SHOW LOADING DIALOG (The new fancy one)
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+      builder: (ctx) => const GenerationLoadingDialog(),
     );
 
     try {
@@ -307,57 +311,92 @@ class HomeTab extends ConsumerWidget {
         },
       );
 
+      // Close the Loading Dialog
       if (context.mounted) Navigator.pop(context);
 
+      // 3. HANDLE SUCCESS
       if (response.statusCode == 201 || response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final remainingCredits = data['remaining_credits'];
 
-        // 2. UPDATE PROVIDER
-        // This makes the UI (e.g. Header Badge) update instantly
+        // Update Provider immediately
         if (remainingCredits != null && remainingCredits is int) {
           ref.read(authProvider.notifier).updateCredits(remainingCredits);
         }
 
-        // Clear UI
+        // Clear UI Inputs
         ref.read(selectedImageProvider.notifier).state = null;
         ref.read(selectedStyleProvider.notifier).state = null;
 
-        // 3. SHOW DIALOG WITH ANIMATION
+        // Show Success Dialog
         if (context.mounted) {
           showDialog(
             context: context,
             barrierColor: Colors.black.withOpacity(0.6),
             builder: (_) => GenerationSuccessDialog(
-              oldCredits: oldCredits,           // e.g. 6
-              newCredits: remainingCredits ?? (oldCredits - 1), // e.g. 5
+              oldCredits: oldCredits,
+              newCredits: remainingCredits ?? (oldCredits - 1),
             ),
           );
         }
-      } else if (response.statusCode == 402) {
-        final msg = jsonDecode(response.body)['message'] ?? "Insufficient credits";
+      }
+
+      else if (response.statusCode == 402) {
+        // 4. HANDLE INSUFFICIENT CREDITS
+        final msg = jsonDecode(response.body)['message'] ?? "You don't have enough credits.";
+
+        // Refresh user balance to be sure UI is in sync
         ref.read(authProvider.notifier).refreshUser();
+
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(msg),
-            backgroundColor: AppTheme.errorRed,
-            action: SnackBarAction(label: "Buy", onPressed: () {}),
-          ));
+          showDialog(
+            context: context,
+            builder: (_) => InsufficientCreditsDialog(
+              message: msg,
+              onTopUp: () {
+                // TODO: Navigate to Store / Payment Screen
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Redirecting to Store...")),
+                );
+              },
+            ),
+          );
         }
-      } else {
+      }
+      // 4. HANDLE INSUFFICIENT CREDITS (402)
+      // 5. HANDLE OTHER API ERRORS
+      else {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text("Error: ${response.statusCode}"),
-          ));
+          showDialog(
+            context: context,
+            builder: (_) => GenerationErrorDialog(
+              message: "Server returned error: ${response.statusCode}",
+              onRetry: () => _handleGenerate(context, ref), // Allow Retry
+            ),
+          );
         }
       }
     } catch (e) {
+      // Close the Loading Dialog if it crashed before closing
       if (context.mounted) {
+        // We check if the modal is still top-most before popping?
+        // Actually, safer to just pop if we are sure the loading dialog is there.
+        // But since we popped explicitly on success/fail branches, we need to ensure we pop here if we hit Catch block.
+        // A common pattern is popping immediately in catch before showing error.
+
+        // IMPORTANT: In the try block above, I popped right after `await`.
+        // If `await` throws, the pop inside `try` is skipped. So we must pop here.
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Connection error: $e")),
+
+        showDialog(
+          context: context,
+          builder: (_) => GenerationErrorDialog(
+            message: "Connection failed. Please check your internet.\n($e)",
+            onRetry: () => _handleGenerate(context, ref),
+          ),
         );
       }
     }
   }
+
 }

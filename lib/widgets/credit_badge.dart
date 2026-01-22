@@ -29,7 +29,7 @@ class CreditBadge extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-                FontAwesomeIcons.bolt,
+                FontAwesomeIcons.coins,
                 size: 14,
                 color: AppTheme.goldAccent
             ),
