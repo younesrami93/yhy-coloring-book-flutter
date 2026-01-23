@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:yhy_coloring_book_flutter/widgets/purchase_credits_dialog.dart';
 import '../core/auth_provider.dart'; // Ensure this has the refreshUser method
 import '../widgets/credit_badge.dart';
 import '../widgets/sleek_bottom_nav.dart';
@@ -28,7 +29,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // 1. FETCH FRESH DATA ON LOAD
     // This ensures we have the correct credit balance from the server immediately
     WidgetsBinding.instance.addPostFrameCallback((_) {
+
+      // 1. Refresh User Data
       ref.read(authProvider.notifier).refreshUser();
+
+      // 2. CHECK PURCHASE INTENT
+      // If the user was sent to Login from "Get Credits", this will be true.
+
+      if (ref.read(purchaseIntentProvider)) {
+        // Reset the flag so it doesn't show again next time
+        ref.read(purchaseIntentProvider.notifier).state = false;
+
+        // Show the purchase dialog
+        showDialog(
+            context: context,
+            builder: (_) => const PurchaseCreditsDialog()
+        );
+      }
+
+
     });
   }
 

@@ -15,6 +15,11 @@ dependencies:
   flutter_localizations: # REQUIRED for localization
     sdk: flutter
 
+
+  google_sign_in: ^7.2.0
+  flutter_facebook_auth: ^7.1.5
+
+
   google_fonts: ^6.1.0
   # State Management
   flutter_riverpod: ^2.4.9
@@ -28,6 +33,8 @@ dependencies:
   uuid: ^4.3.3
   font_awesome_flutter: ^10.6.0
   cached_network_image: ^3.4.1
+  firebase_core: ^4.4.0
+  firebase_messaging: ^16.1.1
 
 
 dev_dependencies:

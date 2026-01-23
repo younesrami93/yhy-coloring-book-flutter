@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:yhy_coloring_book_flutter/screens/login_screen.dart';
 import 'package:yhy_coloring_book_flutter/widgets/generation_error_dialog.dart';
 import 'package:yhy_coloring_book_flutter/widgets/generation_loading_dialog.dart';
 import 'package:yhy_coloring_book_flutter/widgets/insufficient_credits_dialog.dart';
+import 'package:yhy_coloring_book_flutter/widgets/purchase_credits_dialog.dart';
 
 import '../../models/style_model.dart';
 import '../../providers/styles_provider.dart';
@@ -92,7 +94,8 @@ class HomeTab extends ConsumerWidget {
                   height: selectedImage != null ? 350 : 250,
                   margin: const EdgeInsets.symmetric(horizontal: 24),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                    color: theme.colorScheme.surfaceContainerHighest
+                        .withOpacity(0.5),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
                       color: selectedImage != null
@@ -102,47 +105,55 @@ class HomeTab extends ConsumerWidget {
                     ),
                     image: selectedImage != null
                         ? DecorationImage(
-                      image: FileImage(selectedImage),
-                      fit: BoxFit.cover,
-                    )
+                            image: FileImage(selectedImage),
+                            fit: BoxFit.cover,
+                          )
                         : null,
                   ),
                   child: selectedImage != null
                       ? Stack(
-                    children: [
-                      Positioned(
-                        top: 16,
-                        right: 16,
-                        child: CircleAvatar(
-                          backgroundColor: Colors.black54,
-                          child: IconButton(
-                            icon: const Icon(Icons.close, color: Colors.white),
-                            onPressed: () {
-                              ref.read(selectedImageProvider.notifier).state = null;
-                            },
-                          ),
-                        ),
-                      )
-                    ],
-                  )
+                          children: [
+                            Positioned(
+                              top: 16,
+                              right: 16,
+                              child: CircleAvatar(
+                                backgroundColor: Colors.black54,
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () {
+                                    ref
+                                            .read(
+                                              selectedImageProvider.notifier,
+                                            )
+                                            .state =
+                                        null;
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
                       : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        FontAwesomeIcons.image,
-                        size: 48,
-                        color: theme.colorScheme.primary.withOpacity(0.5),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        "Tap to upload photo",
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.primary,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              FontAwesomeIcons.image,
+                              size: 48,
+                              color: theme.colorScheme.primary.withOpacity(0.5),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              "Tap to upload photo",
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
 
@@ -153,8 +164,11 @@ class HomeTab extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Row(
                   children: [
-                    Icon(FontAwesomeIcons.paintbrush,
-                        size: 16, color: theme.colorScheme.primary),
+                    Icon(
+                      FontAwesomeIcons.paintbrush,
+                      size: 16,
+                      color: theme.colorScheme.primary,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       "CHOOSE STYLE",
@@ -181,12 +195,16 @@ class HomeTab extends ConsumerWidget {
                   );
                 },
                 loading: () => const SizedBox(
-                    height: 140, child: Center(child: CircularProgressIndicator())),
+                  height: 140,
+                  child: Center(child: CircularProgressIndicator()),
+                ),
                 error: (error, stack) => SizedBox(
                   height: 140,
                   child: Center(
-                    child: Text("Could not load styles",
-                        style: theme.textTheme.bodySmall),
+                    child: Text(
+                      "Could not load styles",
+                      style: theme.textTheme.bodySmall,
+                    ),
                   ),
                 ),
               ),
@@ -219,7 +237,9 @@ class HomeTab extends ConsumerWidget {
                   ],
                 ),
                 child: ElevatedButton(
-                  onPressed: isReady ? () => _handleGenerate(context, ref) : null,
+                  onPressed: isReady
+                      ? () => _handleGenerate(context, ref)
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
@@ -231,15 +251,19 @@ class HomeTab extends ConsumerWidget {
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(FontAwesomeIcons.wandMagicSparkles,
-                          color: Colors.white, size: 20),
+                      Icon(
+                        FontAwesomeIcons.wandMagicSparkles,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                       SizedBox(width: 12),
                       Text(
                         "Generate Magic",
                         style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ],
                   ),
@@ -256,7 +280,8 @@ class HomeTab extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (_) => SafeArea(
         child: Wrap(
           children: [
@@ -291,10 +316,8 @@ class HomeTab extends ConsumerWidget {
 
     if (selectedStyleId == null || selectedImage == null) return;
 
-    // 1. CAPTURE OLD CREDITS
     final oldCredits = ref.read(authProvider)?.credits ?? 0;
 
-    // 2. SHOW LOADING DIALOG (The new fancy one)
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -306,29 +329,22 @@ class HomeTab extends ConsumerWidget {
         'generate',
         file: selectedImage,
         fileField: 'image',
-        fields: {
-          'style_id': selectedStyleId.toString(),
-        },
+        fields: {'style_id': selectedStyleId.toString()},
       );
 
-      // Close the Loading Dialog
-      if (context.mounted) Navigator.pop(context);
+      if (context.mounted) Navigator.pop(context); // Close loading
 
-      // 3. HANDLE SUCCESS
       if (response.statusCode == 201 || response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final remainingCredits = data['remaining_credits'];
 
-        // Update Provider immediately
         if (remainingCredits != null && remainingCredits is int) {
           ref.read(authProvider.notifier).updateCredits(remainingCredits);
         }
 
-        // Clear UI Inputs
         ref.read(selectedImageProvider.notifier).state = null;
         ref.read(selectedStyleProvider.notifier).state = null;
 
-        // Show Success Dialog
         if (context.mounted) {
           showDialog(
             context: context,
@@ -339,13 +355,11 @@ class HomeTab extends ConsumerWidget {
             ),
           );
         }
-      }
-
-      else if (response.statusCode == 402) {
-        // 4. HANDLE INSUFFICIENT CREDITS
-        final msg = jsonDecode(response.body)['message'] ?? "You don't have enough credits.";
-
-        // Refresh user balance to be sure UI is in sync
+      } else if (response.statusCode == 402) {
+        // --- INSUFFICIENT CREDITS LOGIC ---
+        final msg =
+            jsonDecode(response.body)['message'] ??
+            "You don't have enough credits.";
         ref.read(authProvider.notifier).refreshUser();
 
         if (context.mounted) {
@@ -354,49 +368,55 @@ class HomeTab extends ConsumerWidget {
             builder: (_) => InsufficientCreditsDialog(
               message: msg,
               onTopUp: () {
-                // TODO: Navigate to Store / Payment Screen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Redirecting to Store...")),
-                );
+                // 1. Check if user is Guest
+                final user = ref.read(authProvider);
+                // We assume guest has no email or specific name/id pattern.
+                // Adjust this check based on your actual backend user model.
+                final isGuest = user?.email.isEmpty ?? true;
+
+                if (isGuest) {
+                  // A. Set the "Purchase Intent" flag
+                  ref.read(purchaseIntentProvider.notifier).state = true;
+
+                  // B. Redirect to Login
+                  // We use push() so the Guest session is still in the stack if they hit back,
+                  // but typically LoginScreen replaces everything on success.
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                } else {
+                  // C. Real User -> Show Store directly
+                  showDialog(
+                    context: context,
+                    builder: (_) => const PurchaseCreditsDialog(),
+                  );
+                }
               },
             ),
           );
         }
-      }
-      // 4. HANDLE INSUFFICIENT CREDITS (402)
-      // 5. HANDLE OTHER API ERRORS
-      else {
+      } else {
         if (context.mounted) {
           showDialog(
             context: context,
             builder: (_) => GenerationErrorDialog(
               message: "Server returned error: ${response.statusCode}",
-              onRetry: () => _handleGenerate(context, ref), // Allow Retry
+              onRetry: () => _handleGenerate(context, ref),
             ),
           );
         }
       }
     } catch (e) {
-      // Close the Loading Dialog if it crashed before closing
       if (context.mounted) {
-        // We check if the modal is still top-most before popping?
-        // Actually, safer to just pop if we are sure the loading dialog is there.
-        // But since we popped explicitly on success/fail branches, we need to ensure we pop here if we hit Catch block.
-        // A common pattern is popping immediately in catch before showing error.
-
-        // IMPORTANT: In the try block above, I popped right after `await`.
-        // If `await` throws, the pop inside `try` is skipped. So we must pop here.
         Navigator.pop(context);
-
         showDialog(
           context: context,
           builder: (_) => GenerationErrorDialog(
-            message: "Connection failed. Please check your internet.\n($e)",
+            message: "Connection failed.\n($e)",
             onRetry: () => _handleGenerate(context, ref),
           ),
         );
       }
     }
   }
-
 }

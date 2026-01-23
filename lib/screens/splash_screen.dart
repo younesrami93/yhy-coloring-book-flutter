@@ -19,20 +19,35 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _checkAuth() async {
-    // 1. Artificial delay to show your logo (optional, removing flickering)
+    // 1. Artificial delay (optional)
     await Future.delayed(const Duration(seconds: 2));
 
-    // 2. Check for token
-    final isLoggedIn = await ref.read(authProvider.notifier).checkLoginStatus();
+    final authNotifier = ref.read(authProvider.notifier);
 
-    // 3. Navigate accordingly
+    // 2. Check for existing token
+    bool isLoggedIn = await authNotifier.checkLoginStatus();
+
+    // 3. If NOT logged in, try to sign in as guest automatically
+    if (!isLoggedIn) {
+      try {
+        isLoggedIn = await authNotifier.loginGuest();
+      } catch (e) {
+        // Handle specific errors if needed, otherwise isLoggedIn remains false
+        debugPrint("Auto-guest login failed: $e");
+      }
+    }
+
     if (!mounted) return;
 
+    // 4. Navigate
     if (isLoggedIn) {
+      // Success: Go straight to Home
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } else {
+      // Failure (e.g., No Internet):
+      // Fallback to LoginScreen so the user isn't stuck on the Splash screen
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
@@ -47,14 +62,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Your App Logo Here
             Icon(
               Icons.color_lens_outlined,
               size: 100,
               color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(height: 20),
-            const CircularProgressIndicator(), // Loading spinner
+            const CircularProgressIndicator(),
+            const SizedBox(height: 20),
+            // Optional: Show text indicating what's happening
+            Text(
+              "Setting things up...",
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           ],
         ),
       ),

@@ -2,14 +2,40 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/auth_service.dart';
 import '../models/user_model.dart';
 
+
+final purchaseIntentProvider = StateProvider<bool>((ref) => false);
+
 final authProvider = StateNotifierProvider<AuthNotifier, User?>((ref) {
   return AuthNotifier();
 });
+
+
+
 
 class AuthNotifier extends StateNotifier<User?> {
   AuthNotifier() : super(null);
 
   final _authService = AuthService();
+
+
+
+  Future<bool> loginWithGoogle() async {
+    final user = await _authService.loginWithGoogle();
+    if (user != null) {
+      state = user;
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> loginWithFacebook() async {
+    final user = await _authService.loginWithFacebook();
+    if (user != null) {
+      state = user;
+      return true;
+    }
+    return false;
+  }
 
   /// Checks if a token exists in local storage
   Future<bool> checkLoginStatus() async {

@@ -29,9 +29,9 @@ class LoginScreen extends ConsumerWidget {
 
               // --- Header Section ---
               Icon(
-                  Icons.color_lens_outlined,
-                  size: 80,
-                  color: theme.colorScheme.primary
+                Icons.color_lens_outlined,
+                size: 80,
+                color: theme.colorScheme.primary,
               ),
               const SizedBox(height: 24),
               Text(
@@ -44,7 +44,8 @@ class LoginScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                "Turn your photos into coloring pages instantly.", // You can add this to .arb later
+                "Turn your photos into coloring pages instantly.",
+                // You can add this to .arb later
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: theme.colorScheme.onSurface.withOpacity(0.7),
@@ -57,8 +58,26 @@ class LoginScreen extends ConsumerWidget {
               _SocialLoginButton(
                 icon: FontAwesomeIcons.google,
                 text: "Continue with Google",
-                onPressed: () {
-                  // TODO: Implement Google Auth
+                onPressed: () async {
+                  ref.read(authLoadingProvider.notifier).state = true;
+
+                  // This now calls the backend-integrated method
+                  final success = await ref
+                      .read(authProvider.notifier)
+                      .loginWithGoogle();
+
+                  ref.read(authLoadingProvider.notifier).state = false;
+
+                  if (success && context.mounted) {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                    );
+                  } else if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Google Login Failed")),
+                    );
+                  }
                 },
                 backgroundColor: theme.colorScheme.surfaceContainerHighest,
                 textColor: theme.colorScheme.onSurface,
@@ -68,17 +87,35 @@ class LoginScreen extends ConsumerWidget {
               _SocialLoginButton(
                 icon: FontAwesomeIcons.facebook,
                 text: "Continue with Facebook",
-                onPressed: () {
-                  // TODO: Implement Facebook Auth
+                onPressed: () async {
+                  ref.read(authLoadingProvider.notifier).state = true;
+
+                  final success = await ref
+                      .read(authProvider.notifier)
+                      .loginWithFacebook();
+
+                  ref.read(authLoadingProvider.notifier).state = false;
+
+                  if (success && context.mounted) {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                    );
+                  } else if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Facebook Login Failed")),
+                    );
+                  }
                 },
-                backgroundColor: AppTheme.facebookBlue, // Facebook Blue
+                backgroundColor: AppTheme.facebookBlue,
+                // Facebook Blue
                 textColor: Colors.white,
               ),
 
               const SizedBox(height: 32),
 
               // --- Divider ---
-              Row(
+              /*Row(
                 children: [
                   Expanded(child: Divider(color: theme.dividerColor)),
                   Padding(
@@ -134,7 +171,7 @@ class LoginScreen extends ConsumerWidget {
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
-              ),
+              ),*/
               const SizedBox(height: 24),
             ],
           ),

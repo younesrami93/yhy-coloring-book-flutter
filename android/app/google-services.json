@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "271295917094",
+    "project_id": "coloring-book-yhy",
+    "storage_bucket": "coloring-book-yhy.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:271295917094:android:c6091a21101667e781cae7",
+        "android_client_info": {
+          "package_name": "com.mycolorbook.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDv_EnOi4DTj_f_VPddrXsHxGq1ws4cWSY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
