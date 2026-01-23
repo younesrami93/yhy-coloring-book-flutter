@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:yhy_coloring_book_flutter/widgets/purchase_credits_dialog.dart';
+import 'package:app/widgets/purchase_credits_dialog.dart';
 import '../core/auth_provider.dart'; // Ensure this has the refreshUser method
 import '../widgets/credit_badge.dart';
 import '../widgets/sleek_bottom_nav.dart';

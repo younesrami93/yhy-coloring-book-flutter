@@ -1,4 +1,4 @@
-package com.example.yhy_coloring_book_flutter
+package com.mycolorbook.app
 
 import io.flutter.embedding.android.FlutterActivity
 

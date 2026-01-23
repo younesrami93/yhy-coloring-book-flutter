@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:yhy_coloring_book_flutter/screens/login_screen.dart';
-import 'package:yhy_coloring_book_flutter/widgets/generation_error_dialog.dart';
-import 'package:yhy_coloring_book_flutter/widgets/generation_loading_dialog.dart';
-import 'package:yhy_coloring_book_flutter/widgets/insufficient_credits_dialog.dart';
-import 'package:yhy_coloring_book_flutter/widgets/purchase_credits_dialog.dart';
+import 'package:app/screens/login_screen.dart';
+import 'package:app/widgets/generation_error_dialog.dart';
+import 'package:app/widgets/generation_loading_dialog.dart';
+import 'package:app/widgets/insufficient_credits_dialog.dart';
+import 'package:app/widgets/purchase_credits_dialog.dart';
 
 import '../../models/style_model.dart';
 import '../../providers/styles_provider.dart';

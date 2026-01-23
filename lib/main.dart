@@ -2,15 +2,15 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:yhy_coloring_book_flutter/l10n/app_localizations.dart';
-import 'package:yhy_coloring_book_flutter/screens/login_screen.dart';
-import 'package:yhy_coloring_book_flutter/screens/splash_screen.dart';
+import 'package:app/l10n/app_localizations.dart';
+import 'package:app/screens/login_screen.dart';
+import 'package:app/screens/splash_screen.dart';
 import 'l10n/app_localizations_en.dart';
 import 'theme.dart';
 import 'core/app_state.dart';
 
 void main() async{
-
+  WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   runApp(const ProviderScope(child: MyApp()));
 }
@@ -35,7 +35,7 @@ class MyApp extends ConsumerWidget {
 
       // Localization Configuration
       locale: locale,
-      localizationsDelegates:  [
+      localizationsDelegates:  const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -48,7 +48,7 @@ class MyApp extends ConsumerWidget {
       ],
 
       // Temporary Home Screen to test
-      home: const SplashScreen(),
+      home: const LoginScreen(),
     );
   }
 }
