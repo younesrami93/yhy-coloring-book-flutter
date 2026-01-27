@@ -1,3 +1,4 @@
+import 'package:app/api/purchase_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,7 @@ import 'core/app_state.dart';
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await PurchaseService.init();
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -48,7 +50,7 @@ class MyApp extends ConsumerWidget {
       ],
 
       // Temporary Home Screen to test
-      home: const LoginScreen(),
+      home: const SplashScreen(),
     );
   }
 }

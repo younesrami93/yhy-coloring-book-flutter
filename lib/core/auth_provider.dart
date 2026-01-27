@@ -1,3 +1,4 @@
+import 'package:app/api/purchase_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/auth_service.dart';
 import '../models/user_model.dart';
@@ -23,6 +24,7 @@ class AuthNotifier extends StateNotifier<User?> {
     final user = await _authService.loginWithGoogle();
     if (user != null) {
       state = user;
+      await PurchaseService.identifyUser(user.id);
       return true;
     }
     return false;
@@ -32,6 +34,7 @@ class AuthNotifier extends StateNotifier<User?> {
     final user = await _authService.loginWithFacebook();
     if (user != null) {
       state = user;
+      await PurchaseService.identifyUser(user.id);
       return true;
     }
     return false;
@@ -73,6 +76,7 @@ class AuthNotifier extends StateNotifier<User?> {
     final user = await _authService.loginAsGuest();
     if (user != null) {
       state = user;
+      await PurchaseService.identifyUser(user.id);
       return true;
     }
     return false;
@@ -86,6 +90,7 @@ class AuthNotifier extends StateNotifier<User?> {
 
   Future<void> logout() async {
     await _authService.logout();
+    await PurchaseService.logout(); // Reset RevenueCat
     state = null;
   }
 }

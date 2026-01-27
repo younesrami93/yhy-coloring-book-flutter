@@ -1,3 +1,4 @@
+// [file_path: lib/screens/splash_screen.dart]
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/auth_provider.dart';
@@ -19,35 +20,37 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _checkAuth() async {
-    // 1. Artificial delay (optional)
+    // 1. Artificial delay for branding
     await Future.delayed(const Duration(seconds: 2));
 
     final authNotifier = ref.read(authProvider.notifier);
 
-    // 2. Check for existing token
+    // 2. Check for existing token in SharedPreferences
     bool isLoggedIn = await authNotifier.checkLoginStatus();
 
-    // 3. If NOT logged in, try to sign in as guest automatically
-    if (!isLoggedIn) {
+    if (isLoggedIn) {
+      // CRITICAL: If we have a token, fetch the latest user data (Name, Email, Credits)
+      // otherwise, the app thinks the name is "Welcome Back" and email is empty.
+      await authNotifier.refreshUser();
+    } else {
+      // 3. If NO token, automatically create a Guest Session
       try {
+        debugPrint("No token found. Attempting Guest Login...");
         isLoggedIn = await authNotifier.loginGuest();
       } catch (e) {
-        // Handle specific errors if needed, otherwise isLoggedIn remains false
         debugPrint("Auto-guest login failed: $e");
       }
     }
 
     if (!mounted) return;
 
-    // 4. Navigate
+    // 4. Navigate based on result
     if (isLoggedIn) {
-      // Success: Go straight to Home
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } else {
-      // Failure (e.g., No Internet):
-      // Fallback to LoginScreen so the user isn't stuck on the Splash screen
+      // Only goes here if Guest Login also failed (e.g., no internet)
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
@@ -67,13 +70,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               size: 100,
               color: Theme.of(context).colorScheme.primary,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             const CircularProgressIndicator(),
-            const SizedBox(height: 20),
-            // Optional: Show text indicating what's happening
+            const SizedBox(height: 16),
             Text(
               "Setting things up...",
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
             ),
           ],
         ),
