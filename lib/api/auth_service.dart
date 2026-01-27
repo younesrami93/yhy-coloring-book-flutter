@@ -16,14 +16,14 @@ import 'api_client.dart';
 class AuthService {
   final ApiClient _client = ApiClient();
 
+  // lib/api/auth_service.dart
+
   Future<bool> syncDeviceToken(String fcmToken) async {
-    debugPrint("syncDeviceToken fcmToken"+fcmToken);
+    debugPrint("🚀 Attempting to sync FCM Token: $fcmToken");
     try {
-      final deviceData =
-          await _getDevicePayload(); // Retrieves existing UUID logic
+      final deviceData = await _getDevicePayload();
       final packageInfo = await PackageInfo.fromPlatform();
 
-      //
       final Map<String, dynamic> body = {
         "fcm_token": fcmToken,
         "device_uuid": deviceData['uuid'],
@@ -32,10 +32,15 @@ class AuthService {
         "app_version": packageInfo.version,
       };
 
-      final response = await _client.post('devices/sync', body: body); //
+      final response = await _client.post('devices/sync', body: body);
+
+      // Diagnostic Logs
+      debugPrint("📡 Sync Response Status: ${response.statusCode}");
+      debugPrint("📡 Sync Response Body: ${response.body}");
+
       return response.statusCode == 200;
     } catch (e) {
-      debugPrint("FCM Sync Error: $e");
+      debugPrint("❌ FCM Sync Error: $e");
       return false;
     }
   }

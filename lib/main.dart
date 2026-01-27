@@ -16,9 +16,21 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print("Handling a background message: ${message.messageId}");
 }
 
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+
+  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   await PurchaseService.init();
   runApp(const ProviderScope(child: MyApp()));
@@ -34,6 +46,7 @@ class MyApp extends ConsumerWidget {
     final locale = ref.watch(localeProvider);
 
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Coloring AI',
       debugShowCheckedModeBanner: false,
 

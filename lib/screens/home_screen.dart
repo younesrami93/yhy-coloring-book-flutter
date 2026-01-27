@@ -1,3 +1,4 @@
+import 'package:app/api/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/widgets/purchase_credits_dialog.dart';
@@ -26,6 +27,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
+
+    Future.microtask(() => ref.read(notificationServiceProvider).init());
     // 1. FETCH FRESH DATA ON LOAD
     // This ensures we have the correct credit balance from the server immediately
     WidgetsBinding.instance.addPostFrameCallback((_) {

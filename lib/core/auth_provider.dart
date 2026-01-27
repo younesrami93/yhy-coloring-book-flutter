@@ -15,6 +15,8 @@ final authProvider = StateNotifierProvider<AuthNotifier, User?>((ref) {
 final _authService = AuthService();
 final FirebaseMessaging _fcm = FirebaseMessaging.instance;
 
+
+
 Future<void> _syncFCMToken() async {
   try {
     // 1. Request Permission
@@ -87,6 +89,8 @@ class AuthNotifier extends StateNotifier<User?> {
         credits: 0,
         token: token,
       );
+
+      _syncFCMToken();
       return true; // Logged in
     }
 
@@ -108,6 +112,7 @@ class AuthNotifier extends StateNotifier<User?> {
     if (user != null) {
       state = user;
       await PurchaseService.identifyUser(user.id);
+      await _syncFCMToken();
       return true;
     }
     return false;
