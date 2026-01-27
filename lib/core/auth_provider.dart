@@ -1,4 +1,5 @@
 import 'package:app/api/purchase_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/auth_service.dart';
 import '../models/user_model.dart';
@@ -10,6 +11,8 @@ final authProvider = StateNotifierProvider<AuthNotifier, User?>((ref) {
   return AuthNotifier();
 });
 
+
+final FirebaseMessaging _fcm = FirebaseMessaging.instance;
 
 
 
