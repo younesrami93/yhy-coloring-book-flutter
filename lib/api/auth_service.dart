@@ -5,6 +5,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -14,6 +15,30 @@ import 'api_client.dart';
 
 class AuthService {
   final ApiClient _client = ApiClient();
+
+  Future<bool> syncDeviceToken(String fcmToken) async {
+    debugPrint("syncDeviceToken fcmToken"+fcmToken);
+    try {
+      final deviceData =
+          await _getDevicePayload(); // Retrieves existing UUID logic
+      final packageInfo = await PackageInfo.fromPlatform();
+
+      //
+      final Map<String, dynamic> body = {
+        "fcm_token": fcmToken,
+        "device_uuid": deviceData['uuid'],
+        "platform": Platform.isAndroid ? 'android' : 'ios',
+        "language": Platform.localeName.split('_')[0],
+        "app_version": packageInfo.version,
+      };
+
+      final response = await _client.post('devices/sync', body: body); //
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint("FCM Sync Error: $e");
+      return false;
+    }
+  }
 
   // --- VERSION 6 STYLE: Unnamed Constructor ---
   final GoogleSignIn _googleSignIn = GoogleSignIn(
@@ -46,7 +71,8 @@ class AuthService {
         body['provider'] = provider;
         body['social_token'] = socialToken; // Usually ID Token
         if (socialAccessToken != null) {
-          body['access_token'] = socialAccessToken; // Send access token if available
+          body['access_token'] =
+              socialAccessToken; // Send access token if available
         }
       }
 
@@ -88,7 +114,8 @@ class AuthService {
       if (googleUser == null) return null; // Cancelled
 
       // 3. Get Auth Details
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       // V6 allows accessing both idToken and accessToken directly
       final String? idToken = googleAuth.idToken;

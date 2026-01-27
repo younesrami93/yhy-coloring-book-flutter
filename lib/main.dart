@@ -1,5 +1,6 @@
 import 'package:app/api/purchase_service.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -10,9 +11,15 @@ import 'l10n/app_localizations_en.dart';
 import 'theme.dart';
 import 'core/app_state.dart';
 
-void main() async{
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print("Handling a background message: ${message.messageId}");
+}
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   await PurchaseService.init();
   runApp(const ProviderScope(child: MyApp()));
 }
@@ -37,7 +44,7 @@ class MyApp extends ConsumerWidget {
 
       // Localization Configuration
       locale: locale,
-      localizationsDelegates:  const [
+      localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

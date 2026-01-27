@@ -15,6 +15,7 @@ dependencies:
   flutter_localizations: # REQUIRED for localization
     sdk: flutter
 
+  package_info_plus: ^8.0.0
 
   google_sign_in: ^6.2.1
   flutter_facebook_auth: ^7.1.2
