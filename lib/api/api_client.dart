@@ -26,9 +26,9 @@ class ApiClient {
 
   // 2. Centralized POST Request (JSON)
   Future<http.Response> post(
-      String endpoint, {
-        Map<String, dynamic>? body,
-      }) async {
+    String endpoint, {
+    Map<String, dynamic>? body,
+  }) async {
     final url = Uri.parse('${ApiConstants.baseUrl}/$endpoint');
     final headers = await _getHeaders();
 
@@ -50,11 +50,11 @@ class ApiClient {
 
   // 3. NEW: Centralized Multipart Request (File Uploads)
   Future<http.Response> postMultipart(
-      String endpoint, {
-        required File file,
-        required String fileField, // e.g. 'image'
-        Map<String, String>? fields, // e.g. {'style_id': '1'}
-      }) async {
+    String endpoint, {
+    required File file,
+    required String fileField, // e.g. 'image'
+    Map<String, String>? fields, // e.g. {'style_id': '1'}
+  }) async {
     final url = Uri.parse('${ApiConstants.baseUrl}/$endpoint');
     final request = http.MultipartRequest('POST', url);
 
@@ -97,8 +97,7 @@ class ApiClient {
       "Accept": "application/json",
     };
 
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
+    final token = await getToken();
 
     if (token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
@@ -107,20 +106,18 @@ class ApiClient {
     return headers;
   }
 
-  Future<List<StyleModel>> fetchStyles() async {
-    final response = await get('styles');
-
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-      final List<dynamic> data = jsonResponse['data'];
-      return data.map((e) => StyleModel.fromJson(e)).toList();
-    } else {
-      throw Exception('Failed to load styles: ${response.statusCode}');
-    }
+  Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString("auth_token");
   }
 
   // --- Logging Helpers ---
-  void _logRequest(String method, Uri url, Map<String, String> headers, [dynamic body]) {
+  void _logRequest(
+    String method,
+    Uri url,
+    Map<String, String> headers, [
+    dynamic body,
+  ]) {
     if (kDebugMode) {
       print('🔵 [API Request] $method: $url');
       if (body != null) print('   Body: $body');
@@ -129,7 +126,8 @@ class ApiClient {
 
   void _logResponse(Uri url, http.Response response) {
     if (kDebugMode) {
-      final statusEmoji = response.statusCode >= 200 && response.statusCode < 300 ? '🟢' : '🔴';
+      final statusEmoji =
+          response.statusCode >= 200 && response.statusCode < 300 ? '🟢' : '🔴';
       print('$statusEmoji [API Response] ${response.statusCode}: $url');
       print('   Response: ${response.body}');
     }

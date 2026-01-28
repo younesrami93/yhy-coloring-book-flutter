@@ -1,9 +1,11 @@
+import 'package:app/api/api_client.dart';
+import 'package:app/api/api_service.dart';
+import 'package:app/models/User.dart';
 import 'package:app/services/purchase_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
-import '../models/user_model.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 final purchaseIntentProvider = StateProvider<bool>((ref) => false);
@@ -13,9 +15,9 @@ final authProvider = StateNotifierProvider<AuthNotifier, User?>((ref) {
 });
 
 final _authService = AuthService();
+final _apiService = ApiService();
+final _apiClient = ApiClient();
 final FirebaseMessaging _fcm = FirebaseMessaging.instance;
-
-
 
 Future<void> _syncFCMToken() async {
   try {
@@ -33,7 +35,7 @@ Future<void> _syncFCMToken() async {
 
       if (fcmToken != null) {
         // 3. Sync with Backend
-        await _authService.syncDeviceToken(fcmToken);
+        await _apiService.syncDeviceToken(fcmToken);
       }
     } else {
       debugPrint("_syncFCMToken authorizationStatus not authorized");
@@ -41,7 +43,7 @@ Future<void> _syncFCMToken() async {
 
     // 4. Listen for token refreshes
     _fcm.onTokenRefresh.listen((newToken) {
-      _authService.syncDeviceToken(newToken);
+      _apiService.syncDeviceToken(newToken);
     });
   } catch (e) {
     debugPrint("Notification Init Error: $e");
@@ -50,14 +52,14 @@ Future<void> _syncFCMToken() async {
 
 class AuthNotifier extends StateNotifier<User?> {
   AuthNotifier() : super(null);
-
+  final _apiService = ApiService(); // Add this
   final _authService = AuthService();
 
   Future<bool> loginWithGoogle() async {
     final user = await _authService.loginWithGoogle();
     if (user != null) {
       state = user;
-      await PurchaseService.identifyUser(user.id);
+      await PurchaseService.identifyUser(user.id.toString());
       await _syncFCMToken();
       return true;
     }
@@ -68,7 +70,7 @@ class AuthNotifier extends StateNotifier<User?> {
     final user = await _authService.loginWithFacebook();
     if (user != null) {
       state = user;
-      await PurchaseService.identifyUser(user.id);
+      await PurchaseService.identifyUser(user.id.toString());
       await _syncFCMToken();
       return true;
     }
@@ -77,13 +79,13 @@ class AuthNotifier extends StateNotifier<User?> {
 
   /// Checks if a token exists in local storage
   Future<bool> checkLoginStatus() async {
-    final token = await _authService.getToken();
+    final token = await _apiClient.getToken();
 
     if (token != null && token.isNotEmpty) {
       // We found a token! Restore a basic user session.
       // (In a real app, you would verify this token with the API here)
       state = User(
-        id: "cached-id",
+        id: 0,
         name: "Welcome Back",
         email: "",
         credits: 0,
@@ -101,17 +103,18 @@ class AuthNotifier extends StateNotifier<User?> {
   Future<void> refreshUser() async {
     if (state == null) return; // Don't refresh if not logged in
 
-    final updatedUser = await _authService.getUserData();
+    final updatedUser = await _apiService.getUserData();
     if (updatedUser != null) {
-      state = updatedUser; // This triggers the UI update automatically
+      state = updatedUser as User?; // This triggers the UI update automatically
     }
   }
 
   Future<bool> loginGuest() async {
-    final user = await _authService.loginAsGuest();
+    final user = await _apiService.authenticate();
+    ;
     if (user != null) {
       state = user;
-      await PurchaseService.identifyUser(user.id);
+      await PurchaseService.identifyUser(user.id.toString());
       await _syncFCMToken();
       return true;
     }

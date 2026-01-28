@@ -372,7 +372,7 @@ class HomeTab extends ConsumerWidget {
                 final user = ref.read(authProvider);
                 // We assume guest has no email or specific name/id pattern.
                 // Adjust this check based on your actual backend user model.
-                final isGuest = user?.email.isEmpty ?? true;
+                final isGuest = user?.isGuest ?? true;
 
                 if (isGuest) {
                   // A. Set the "Purchase Intent" flag

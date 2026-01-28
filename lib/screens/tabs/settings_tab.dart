@@ -17,7 +17,7 @@ class SettingsTab extends ConsumerWidget {
 
     // Logic: Guests usually have empty emails or specific IDs.
     // Based on your User model, checking if email is empty is a safe bet.
-    final bool isGuest = user?.email.isEmpty ?? true;
+    final bool isGuest = user?.isGuest ?? true;
     final String displayName = isGuest ? "Guest User" : (user?.name ?? "User");
     final String displayEmail = isGuest ? "Sign in to save your work" : (user?.email ?? "");
 

@@ -1,6 +1,6 @@
+import 'package:app/models/User.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import '../models/user_model.dart';
 
 class HomeHeader extends StatelessWidget {
   final User? user;
@@ -26,7 +26,9 @@ class HomeHeader extends StatelessWidget {
               radius: 24,
               backgroundColor: theme.colorScheme.surfaceContainerHighest,
               child: Text(
-                user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : "G",
+                user?.name.isNotEmpty == true
+                    ? user!.name[0].toUpperCase()
+                    : "G",
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,

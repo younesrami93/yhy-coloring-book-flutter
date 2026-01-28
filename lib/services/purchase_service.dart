@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
-import '../models/user_model.dart';
 
 class PurchaseService {
   // TODO: Add your API Keys from RevenueCat Dashboard

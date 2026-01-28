@@ -1,3 +1,4 @@
+import 'package:app/api/api_service.dart';
 import 'package:app/screens/home_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'auth_service.dart';
 class NotificationService {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final AuthService _authService = AuthService();
+  final ApiService _apiService = ApiService();
   final Ref ref;
 
   NotificationService(this.ref);
@@ -25,11 +27,11 @@ class NotificationService {
       // 2. Get and Sync Token
       String? token = await _fcm.getToken();
       if (token != null) {
-        await _authService.syncDeviceToken(token);
+        await _apiService.syncDeviceToken(token);
       }
 
       // 3. Listen for token refreshes
-      _fcm.onTokenRefresh.listen(_authService.syncDeviceToken);
+      _fcm.onTokenRefresh.listen(_apiService.syncDeviceToken);
 
       // 4. Set Foreground Options (iOS)
       await _fcm.setForegroundNotificationPresentationOptions(
