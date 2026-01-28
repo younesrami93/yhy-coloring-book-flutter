@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
-import '../api/purchase_service.dart';
+import '../services/purchase_service.dart';
 import '../core/auth_provider.dart';
 
 class PurchaseCreditsDialog extends ConsumerStatefulWidget {

@@ -1,8 +1,8 @@
-import 'package:app/api/purchase_service.dart';
+import 'package:app/services/purchase_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../api/auth_service.dart';
+import '../services/auth_service.dart';
 import '../models/user_model.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 

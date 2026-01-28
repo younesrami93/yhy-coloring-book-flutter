@@ -10,7 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/user_model.dart';
-import 'api_client.dart';
+import '../api/api_client.dart';
 // import '../core/api_constants.dart'; // Uncomment if needed
 
 class AuthService {
