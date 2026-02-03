@@ -2,7 +2,7 @@ import 'package:app/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/widgets/purchase_credits_dialog.dart';
-import '../core/auth_provider.dart'; // Ensure this has the refreshUser method
+import '../providers/auth_provider.dart'; // Ensure this has the refreshUser method
 import '../widgets/credit_badge.dart';
 import '../widgets/sleek_bottom_nav.dart';
 import '../providers/generations_provider.dart';
@@ -36,19 +36,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       // 1. Refresh User Data
       ref.read(authProvider.notifier).refreshUser();
 
-      // 2. CHECK PURCHASE INTENT
-      // If the user was sent to Login from "Get Credits", this will be true.
-
-      if (ref.read(purchaseIntentProvider)) {
-        // Reset the flag so it doesn't show again next time
-        ref.read(purchaseIntentProvider.notifier).state = false;
-
-        // Show the purchase dialog
-        showDialog(
-            context: context,
-            builder: (_) => const PurchaseCreditsDialog()
-        );
-      }
 
 
     });

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/app_state.dart';
-import '../../core/auth_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../login_screen.dart';
 
 class SettingsTab extends ConsumerWidget {

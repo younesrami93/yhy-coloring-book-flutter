@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:app/core/auth_provider.dart';
+import 'package:app/providers/auth_provider.dart';
 import 'package:app/l10n/app_localizations.dart';
 import 'package:app/screens/home_screen.dart';
 import 'package:app/theme.dart';

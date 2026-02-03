@@ -1,7 +1,7 @@
 // [file_path: lib/screens/splash_screen.dart]
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/auth_provider.dart';
+import '../providers/auth_provider.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 

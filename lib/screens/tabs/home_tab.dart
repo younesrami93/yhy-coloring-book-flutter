@@ -14,7 +14,7 @@ import '../../models/style_model.dart';
 import '../../providers/styles_provider.dart';
 import '../../theme.dart';
 import '../../widgets/style_selector.dart';
-import '../../core/auth_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/generation_success_dialog.dart'; // <--- Import New Widget
 
 final selectedStyleProvider = StateProvider<int?>((ref) => null);
@@ -376,8 +376,6 @@ class HomeTab extends ConsumerWidget {
 
                 if (isGuest) {
                   // A. Set the "Purchase Intent" flag
-                  ref.read(purchaseIntentProvider.notifier).state = true;
-
                   // B. Redirect to Login
                   // We use push() so the Guest session is still in the stack if they hit back,
                   // but typically LoginScreen replaces everything on success.

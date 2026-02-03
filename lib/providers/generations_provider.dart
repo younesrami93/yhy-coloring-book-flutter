@@ -67,7 +67,10 @@ class GenerationsNotifier extends StateNotifier<GenerationsState> {
           isLoading: false,
         );
       } else {
-        state = state.copyWith(isLoading: false, error: "Failed to load history");
+        state = state.copyWith(
+          isLoading: false,
+          error: "Failed to load history",
+        );
       }
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -80,6 +83,7 @@ class GenerationsNotifier extends StateNotifier<GenerationsState> {
   }
 }
 
-final generationsProvider = StateNotifierProvider<GenerationsNotifier, GenerationsState>((ref) {
-  return GenerationsNotifier(ref);
-});
+final generationsProvider =
+    StateNotifierProvider<GenerationsNotifier, GenerationsState>((ref) {
+      return GenerationsNotifier(ref);
+    });
