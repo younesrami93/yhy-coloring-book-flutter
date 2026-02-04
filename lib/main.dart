@@ -15,13 +15,12 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   print("Handling a background message: ${message.messageId}");
 }
-
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-
   await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
     alert: true,
     badge: true,
@@ -35,6 +34,7 @@ void main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
+
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
@@ -46,7 +46,8 @@ class MyApp extends ConsumerWidget {
 
     return MaterialApp(
       navigatorKey: navigatorKey,
-      title: 'Coloring AI',
+      scaffoldMessengerKey: scaffoldMessengerKey,
+      title: 'ColorStory',
       debugShowCheckedModeBanner: false,
 
       // Theme Configuration

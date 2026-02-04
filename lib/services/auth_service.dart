@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api_constants.dart';
@@ -13,13 +14,13 @@ class AuthService {
     serverClientId: ApiConstants.webClientId,
     scopes: ['email', 'profile', 'openid'],
   );
-
+  final _storage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
 
   Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString("auth_token");
+    return await _storage.read(key: "auth_token");
   }
-
 
   /// Triggers the Google Sign-In flow and returns the authentication credentials.
   Future<GoogleSignInAuthentication?> getGoogleCredentials() async {
@@ -57,6 +58,11 @@ class AuthService {
   Future<void> logoutSDKs() async {
     try {
       await _googleSignIn.signOut();
+    } catch (e) {
+      debugPrint("SDK Logout Error: $e");
+    }
+
+    try {
       await FacebookAuth.instance.logOut();
     } catch (e) {
       debugPrint("SDK Logout Error: $e");

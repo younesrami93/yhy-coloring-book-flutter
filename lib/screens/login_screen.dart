@@ -62,21 +62,33 @@ class LoginScreen extends ConsumerWidget {
                   ref.read(authLoadingProvider.notifier).state = true;
 
                   // This now calls the backend-integrated method
-                  final success = await ref
-                      .read(authProvider.notifier)
-                      .loginWithGoogle();
 
-                  ref.read(authLoadingProvider.notifier).state = false;
+                  try {
+                    // 1. Attempt Login
+                    await ref.read(authProvider.notifier).loginWithGoogle();
 
-                  if (success && context.mounted) {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const HomeScreen()),
-                    );
-                  } else if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Google Login Failed")),
-                    );
+                    // 2. Success? Navigate
+                    if (context.mounted) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      );
+                    }
+                  } catch (e) {
+                    // 3. Failure? Show specific message
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(e.toString()),
+                          // e.g., "Invalid Credentials" or "Session Expired"
+                          backgroundColor: Colors.red,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  } finally {
+                    // 4. Always turn off loading
+                    ref.read(authLoadingProvider.notifier).state = false;
                   }
                 },
                 backgroundColor: theme.colorScheme.surfaceContainerHighest,
@@ -90,21 +102,32 @@ class LoginScreen extends ConsumerWidget {
                 onPressed: () async {
                   ref.read(authLoadingProvider.notifier).state = true;
 
-                  final success = await ref
-                      .read(authProvider.notifier)
-                      .loginWithFacebook();
+                  try {
+                    // 1. Attempt Login
+                    await ref.read(authProvider.notifier).loginWithFacebook();
 
-                  ref.read(authLoadingProvider.notifier).state = false;
-
-                  if (success && context.mounted) {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const HomeScreen()),
-                    );
-                  } else if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Facebook Login Failed")),
-                    );
+                    // 2. Success? Navigate
+                    if (context.mounted) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      );
+                    }
+                  } catch (e) {
+                    // 3. Failure? Show specific message
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(e.toString()),
+                          // e.g., "Invalid Credentials" or "Session Expired"
+                          backgroundColor: Colors.red,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  } finally {
+                    // 4. Always turn off loading
+                    ref.read(authLoadingProvider.notifier).state = false;
                   }
                 },
                 backgroundColor: AppTheme.facebookBlue,

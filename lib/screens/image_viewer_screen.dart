@@ -1,8 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/generation_model.dart';
-// import '../theme.dart'; // Uncomment if you need AppTheme colors
 
 class ImageViewerScreen extends StatefulWidget {
   final Generation generation;
@@ -16,6 +22,7 @@ class ImageViewerScreen extends StatefulWidget {
 class _ImageViewerScreenState extends State<ImageViewerScreen>
     with SingleTickerProviderStateMixin {
   bool _showControls = true;
+  bool _isProcessing = false; // To show loading spinner during actions
   late AnimationController _controlsController;
 
   @override
@@ -27,7 +34,6 @@ class _ImageViewerScreenState extends State<ImageViewerScreen>
       value: 1.0,
     );
 
-    // Auto-hide controls after 3 seconds
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         setState(() => _showControls = false);
@@ -45,18 +51,103 @@ class _ImageViewerScreenState extends State<ImageViewerScreen>
     }
   }
 
+  /// ----------------------------------------------------------------
+  /// ACTION LOGIC
+  /// ----------------------------------------------------------------
+
+  Future<Uint8List?> _downloadImageBytes(String url) async {
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        return response.bodyBytes;
+      }
+    } catch (e) {
+      debugPrint("Download Error: $e");
+    }
+    return null;
+  }
+
+  Future<void> _handleShare(String imageUrl) async {
+    setState(() => _isProcessing = true);
+    try {
+      final bytes = await _downloadImageBytes(imageUrl);
+      if (bytes == null) throw Exception("Failed to download image");
+
+      final temp = await getTemporaryDirectory();
+      final path = '${temp.path}/coloring_page_${widget.generation.id}.png';
+      final file = File(path);
+      await file.writeAsBytes(bytes);
+
+      if (mounted) {
+        // Share the image file specifically (better for Instagram/WhatsApp)
+        await Share.shareXFiles(
+          [XFile(path)],
+          text: 'Check out my coloring page! 🎨',
+        );
+      }
+    } catch (e) {
+      _showError("Failed to share image");
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  Future<void> _handlePdf(String imageUrl, {bool isPrinting = false}) async {
+    setState(() => _isProcessing = true);
+    try {
+      final bytes = await _downloadImageBytes(imageUrl);
+      if (bytes == null) throw Exception("Failed to download image");
+
+      final image = pw.MemoryImage(bytes);
+
+      // Create PDF Document
+      final pdf = pw.Document();
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          build: (pw.Context context) {
+            return pw.Center(
+              child: pw.Image(image, fit: pw.BoxFit.contain),
+            );
+          },
+        ),
+      );
+
+      if (isPrinting) {
+        // Open Print Dialog
+        await Printing.layoutPdf(
+          onLayout: (PdfPageFormat format) async => pdf.save(),
+          name: 'Coloring Page #${widget.generation.id}',
+        );
+      } else {
+        // Share/Save the PDF file
+        await Printing.sharePdf(
+          bytes: await pdf.save(),
+          filename: 'coloring_page_${widget.generation.id}.pdf',
+        );
+      }
+    } catch (e) {
+      _showError("Failed to process PDF");
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  /// ----------------------------------------------------------------
+  /// UI BUILD
+  /// ----------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     final g = widget.generation;
     final bool hasResult = g.processedImageUrl != null;
-
-    // 1. Resolve URLs
-    // High Res: The final result (or original if no result)
     final String? highResUrl = hasResult ? g.processedImageUrl : g.originalImageUrl;
-
-    // Thumbnail: The smaller version (or fallback to High Res if missing)
-    // NOTE: We assume your model has these fields based on your 'before_after_card.dart'
-    // If 'processed_thumb_md' is not in your model, remove that part or ensure model is updated.
     final String? thumbUrl = hasResult
         ? (g.processed_thumb_md ?? g.processedImageUrl)
         : (g.original_thumb_md ?? g.originalImageUrl);
@@ -65,108 +156,34 @@ class _ImageViewerScreenState extends State<ImageViewerScreen>
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // --- A. ZOOMABLE IMAGE AREA ---
+          // A. ZOOMABLE IMAGE AREA
           GestureDetector(
             onTap: _toggleControls,
             child: InteractiveViewer(
               minScale: 1.0,
-              maxScale: 3.0 ,
+              maxScale: 3.0,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // LAYER 1: Low-Res Thumbnail (Placeholder)
-                  // This is displayed immediately at the back
                   if (thumbUrl != null)
-                    Image.network(
-                      thumbUrl,
-                      fit: BoxFit.contain,
-                    ),
-
-                  // LAYER 2: High-Res Image (Loads on top)
+                    Image.network(thumbUrl, fit: BoxFit.contain),
                   if (highResUrl != null)
                     Image.network(
                       highResUrl,
                       fit: BoxFit.contain,
-
-                      // Custom Loader: Shows while fetching chunks
-                      loadingBuilder: (context, child, loadingProgress) {
-                        // If fully loaded (progress is null), show the image
-                        if (loadingProgress == null) return child;
-
-                        // If loading, show the UI on top of Layer 1
-                        return Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.7),
-                              borderRadius: BorderRadius.circular(30),
-                              border: Border.all(color: Colors.white24),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                const Text(
-                                  "Loading high quality...",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
+                      loadingBuilder: (ctx, child, progress) {
+                        if (progress == null) return child;
+                        return const Center(); // Clean loading, we have thumb
                       },
-
-                      // Smooth Fade-In when loaded
-                      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                        if (wasSynchronouslyLoaded) return child;
-                        return AnimatedOpacity(
-                          opacity: frame == null ? 0 : 1,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeOut,
-                          child: child,
-                        );
-                      },
-
-                      errorBuilder: (context, error, stackTrace) {
-                        return Center(
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                                color: Colors.black54,
-                                borderRadius: BorderRadius.circular(16)),
-                            child: const Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.broken_image,
-                                    color: Colors.white54, size: 32),
-                                SizedBox(height: 8),
-                                Text("Failed to load HD",
-                                    style: TextStyle(color: Colors.white54)),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                      errorBuilder: (_, __, ___) => const Center(
+                          child: Icon(Icons.broken_image, color: Colors.white54)),
                     ),
                 ],
               ),
             ),
           ),
 
-          // --- B. TOP NAV BAR ---
+          // B. TOP NAV BAR
           Positioned(
             top: 0,
             left: 0,
@@ -177,9 +194,9 @@ class _ImageViewerScreenState extends State<ImageViewerScreen>
                 padding: const EdgeInsets.fromLTRB(8, 52, 8, 0),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
+                    colors: [Colors.black54, Colors.transparent],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Colors.black54, Colors.transparent],
                   ),
                 ),
                 child: Row(
@@ -194,7 +211,7 @@ class _ImageViewerScreenState extends State<ImageViewerScreen>
             ),
           ),
 
-          // --- C. BOTTOM ACTION BAR ---
+          // C. BOTTOM ACTION BAR
           Positioned(
             bottom: 32,
             left: 24,
@@ -202,8 +219,7 @@ class _ImageViewerScreenState extends State<ImageViewerScreen>
             child: FadeTransition(
               opacity: _controlsController,
               child: Container(
-                padding:
-                const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                 decoration: BoxDecoration(
                   color: const Color(0xFF202020).withOpacity(0.9),
                   borderRadius: BorderRadius.circular(32),
@@ -216,14 +232,34 @@ class _ImageViewerScreenState extends State<ImageViewerScreen>
                     )
                   ],
                 ),
-                child: Row(
+                child: _isProcessing
+                // Show Loader inside the pill when working
+                    ? const SizedBox(
+                  height: 50,
+                  child: Center(
+                      child: CircularProgressIndicator(color: Colors.white)),
+                )
+                // Show Buttons
+                    : Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildActionButton(FontAwesomeIcons.shareNodes, "Share"),
+                    _buildActionButton(
+                      FontAwesomeIcons.shareNodes,
+                      "Share",
+                          () => highResUrl != null ? _handleShare(highResUrl) : null,
+                    ),
                     Container(width: 1, height: 24, color: Colors.white12),
-                    _buildActionButton(FontAwesomeIcons.filePdf, "PDF"),
+                    _buildActionButton(
+                      FontAwesomeIcons.filePdf,
+                      "PDF",
+                          () => highResUrl != null ? _handlePdf(highResUrl, isPrinting: false) : null,
+                    ),
                     Container(width: 1, height: 24, color: Colors.white12),
-                    _buildActionButton(FontAwesomeIcons.print, "Print"),
+                    _buildActionButton(
+                      FontAwesomeIcons.print,
+                      "Print",
+                          () => highResUrl != null ? _handlePdf(highResUrl, isPrinting: true) : null,
+                    ),
                   ],
                 ),
               ),
@@ -234,14 +270,14 @@ class _ImageViewerScreenState extends State<ImageViewerScreen>
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label) {
+  Widget _buildActionButton(IconData icon, String label, VoidCallback? onTap) {
     return InkWell(
-      onTap: () {
+      onTap: onTap != null
+          ? () {
         HapticFeedback.lightImpact();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("$label feature coming soon!")),
-        );
-      },
+        onTap();
+      }
+          : null,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

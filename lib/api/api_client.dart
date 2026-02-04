@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:app/core/ApiException.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import '../core/api_constants.dart';
@@ -9,6 +11,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Handles raw HTTP communication, headers, and centralized logging.
 class ApiClient {
   static const String _tokenKey = 'auth_token';
+
+  final _storage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
 
   // ----------------------------------------------------------------
   // 1. CORE REQUEST METHODS
@@ -74,6 +80,7 @@ class ApiClient {
   // ----------------------------------------------------------------
 
   /// Wrapper to handle logging and standard try-catch for basic requests
+
   Future<http.Response> _performRequest(
     Future<http.Response> Function() requestFn,
     String method,
@@ -86,16 +93,42 @@ class ApiClient {
     try {
       final response = await requestFn();
       _logResponse(url, response);
+
+      // --- NEW ERROR HANDLING LOGIC ---
+      if (response.statusCode >= 400) {
+        // 1. Parse the error message from Laravel's JSON response
+        String errorMessage = 'Something went wrong';
+        try {
+          final errorBody = jsonDecode(response.body);
+          // Laravel usually returns 'message' or 'error'
+          errorMessage =
+              errorBody['message'] ?? errorBody['error'] ?? errorMessage;
+        } catch (_) {
+          // If parsing fails, use the status reason
+          errorMessage = response.reasonPhrase ?? 'Server Error';
+        }
+
+        // 2. Handle specific codes (Optional: trigger logout on 401)
+        if (response.statusCode == 401) {
+          errorMessage = "Session expired. Please login again.";
+          // You could trigger a global logout event here later
+        }
+
+        // 3. Throw the exception to be caught by the UI/Provider
+        throw ApiException(errorMessage, statusCode: response.statusCode);
+      }
+      // -------------------------------
+
       return response;
     } catch (e) {
       _logError(url, e);
-      rethrow;
+      rethrow; // Pass the error up
     }
   }
 
   Future<Map<String, String>> _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString(_tokenKey);
+    final token = await _storage.read(key: _tokenKey);
 
     return {
       "Content-Type": "application/json",

@@ -1,5 +1,6 @@
 import 'package:app/api/api_client.dart';
 import 'package:app/api/api_service.dart';
+import 'package:app/core/ApiException.dart';
 import 'package:app/models/User.dart';
 import 'package:app/services/purchase_service.dart';
 import 'package:app/services/notification_service.dart';
@@ -25,20 +26,33 @@ class AuthNotifier extends StateNotifier<User?> {
   final AuthService _authService;
   final NotificationService _notificationService;
 
-  AuthNotifier(this._apiService, this._authService, this._notificationService) : super(null);
+  AuthNotifier(this._apiService, this._authService, this._notificationService)
+    : super(null);
 
   /// 1. Google Login Flow
-  Future<bool> loginWithGoogle() async {
+  Future<void> loginWithGoogle() async {
+    // Changed return type to Future<void> - we rely on exceptions for failure
     final creds = await _authService.getGoogleCredentials();
+
     if (creds?.idToken != null) {
+      // If authenticate fails, it throws ApiException.
+      // We let it propagate to the UI.
       final user = await _apiService.authenticate(
         provider: 'google',
         socialToken: creds!.idToken,
         socialAccessToken: creds.accessToken,
       );
-      return _finalizeLogin(user);
+
+      if (user != null) {
+        await _finalizeLogin(user);
+      } else {
+        throw ApiException(
+          "Login failed",
+        ); // Fallback if user is null but no error thrown
+      }
+    } else {
+      throw ApiException("Google sign-in cancelled");
     }
-    return false;
   }
 
   /// 2. Facebook Login Flow
@@ -62,12 +76,13 @@ class AuthNotifier extends StateNotifier<User?> {
 
   /// 4. Startup Check: Restore Session from Token
   Future<bool> checkLoginStatus() async {
-    final token = await _apiService.getToken(); // Moved token retrieval to ApiService
+    final token = await _apiService.getToken();
     if (token != null && token.isNotEmpty) {
       final user = await _apiService.getUserData();
       if (user != null) {
         state = user;
-        _notificationService.init(); // Re-sync notification listeners on startup
+        _notificationService
+            .init(); // Re-sync notification listeners on startup
         return true;
       }
     }
@@ -103,9 +118,16 @@ class AuthNotifier extends StateNotifier<User?> {
   }
 
   Future<void> logout() async {
-    await _authService.logoutSDKs();
-    await PurchaseService.logout();
-    await _apiService.clearToken(); // Centralized token clearing in ApiService
+    try {
+      await _authService.logoutSDKs();
+    } catch (e) {}
+    try {
+      await PurchaseService.logout();
+    } catch (e) {}
+    try {
+      await _apiService
+          .clearToken(); // Centralized token clearing in ApiService
+    } catch (e) {}
     state = null;
   }
 }

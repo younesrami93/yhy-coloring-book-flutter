@@ -36,8 +36,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       // 1. Refresh User Data
       ref.read(authProvider.notifier).refreshUser();
 
-
-
     });
   }
 
