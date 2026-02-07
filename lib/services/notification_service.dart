@@ -6,21 +6,21 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../main.dart'; // To access navigatorKey
-import '../core/app_state.dart'; // To access bottomNavProvider
+import '../core/app_state.dart'; // To access bottomNavIndexProvider (renamed from bottomNavProvider)
 import 'auth_service.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // Import this
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NotificationService {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
-  final AuthService _authService = AuthService();
   final ApiService _apiService = ApiService();
   final Ref ref;
-  final FlutterLocalNotificationsPlugin _localNotifications =
-      FlutterLocalNotificationsPlugin();
-
+  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  bool _isInitialized = false;
   NotificationService(this.ref);
 
   Future<void> init() async {
+
+    if (_isInitialized) return;
     // 1. Request Permissions (iOS/Android 13+)
     NotificationSettings settings = await _fcm.requestPermission(
       alert: true,
@@ -29,6 +29,7 @@ class NotificationService {
     );
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      _isInitialized = true;
       // 2. Get and Sync Token
       String? token = await _fcm.getToken();
       if (token != null) {
@@ -45,7 +46,24 @@ class NotificationService {
         sound: true,
       );
 
-      // 5. Setup Interaction Listeners
+      // 5. Initialize Local Notifications (Android)
+      const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+      const InitializationSettings initializationSettings =
+      InitializationSettings(android: initializationSettingsAndroid);
+
+      await _localNotifications.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: (NotificationResponse response) {
+          // Handle Local Notification Click
+          if (response.payload != null) {
+            // Reconstruct a message-like object or handle directly
+            _handlePayloadClick(response.payload);
+          }
+        },
+      );
+
+      // 6. Setup Interaction Listeners
       _setupInteractions();
     }
   }
@@ -53,41 +71,113 @@ class NotificationService {
   void _setupInteractions() {
     // A. App is TERMINATED: Notification clicked to open app
     _fcm.getInitialMessage().then((message) {
-      if (message != null) _handleMessageClick(message);
+      if (message != null) {
+        debugPrint("Application opened from Terminated state");
+        _handleMessageClick(message);
+      }
     });
 
     // B. App is in BACKGROUND: Notification clicked from tray
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageClick);
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      debugPrint("Application opened from Background state");
+      _handleMessageClick(message);
+    });
 
     // C. App is in FOREGROUND: Message received while using app
     FirebaseMessaging.onMessage.listen((message) {
       debugPrint("Foreground notification received: ${message.data}");
 
       final data = message.data;
-      final String? type = data['type']; // Make sure your backend sends 'type'
-      if (type == 'promo' || type == 'system') {
-        _showLocalNotification(message);
-        return;
-      }
+      final String? type = data['type'];
+
+      // CASE 1: GENERATION COMPLETED
       if (type == 'generation_completed') {
         _handleInAppGenerationEvent(message, isSuccess: true);
         return;
       }
 
-      // CASE 3: GENERATION FAILED
+      // CASE 2: GENERATION FAILED
       if (type == 'generation_failed') {
         _handleInAppGenerationEvent(message, isSuccess: false);
         return;
       }
 
+      // CASE 3: PROMO / SYSTEM
       _showLocalNotification(message);
-
-      // Optional: Show a custom snackbar/toast here
     });
   }
 
   /// -------------------------------------------------------------
-  /// HANDLER 1: Standard Notification (Promos)
+  /// HANDLER: Deep Link Logic (Terminated / Background)
+  /// -------------------------------------------------------------
+  void _handleMessageClick(RemoteMessage message) {
+    final String? generationId = message.data['generation_id'];
+    if (generationId != null) {
+      _handlePayloadClick(generationId);
+    }
+  }
+
+  void _handlePayloadClick(String? generationId) {
+    if (generationId == null) return;
+
+    // 1. Navigate to Home (Resetting stack to avoid back-button issues)
+    // Ensure '/home' is registered in your main.dart routes
+    navigatorKey.currentState?.pushNamedAndRemoveUntil(
+      '/home',
+          (route) => false,
+    );
+
+    // 2. Switch to History Tab (Index 1)
+    // We delay slightly to let the navigation settle
+    Future.delayed(const Duration(milliseconds: 100), () {
+      ref.read(bottomNavIndexProvider.notifier).state = 1;
+    });
+
+    // 3. Open the Modal
+    // Wait for the build cycle to complete after navigation
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _openGenerationModal(generationId);
+      });
+    });
+  }
+
+  void _openGenerationModal(String idstr) {
+    final int? id = int.tryParse(idstr);
+    if (id == null) return;
+
+    // Use the navigatorKey context to show dialog
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      showDialog(
+        context: context,
+        builder: (context) => GenerationDetailDialog(generationId: id),
+      );
+    }
+  }
+
+  /// -------------------------------------------------------------
+  /// HANDLER: Foreground In-App Events
+  /// -------------------------------------------------------------
+  void _handleInAppGenerationEvent(RemoteMessage message, {required bool isSuccess}) {
+    // Auto-refresh if user is looking at History list
+    final int currentIndex = ref.read(bottomNavIndexProvider);
+    if (currentIndex == 1) {
+      debugPrint("User is on History tab. Auto-refreshing list...");
+      ref.read(generationsProvider.notifier).refresh();
+    }
+
+    final generationId = message.data['generation_id'];
+
+    // Show the custom SnackBar
+    showStatusSnackBar(
+        id: generationId?.toString(),
+        isSuccess: isSuccess
+    );
+  }
+
+  /// -------------------------------------------------------------
+  /// UI: Local Notification (System Tray)
   /// -------------------------------------------------------------
   void _showLocalNotification(RemoteMessage message) {
     RemoteNotification? notification = message.notification;
@@ -106,38 +196,14 @@ class NotificationService {
             priority: Priority.high,
           ),
         ),
-        payload: message.data['generation_id'],
+        payload: message.data['generation_id'], // Pass ID to payload for click handling
       );
     }
   }
 
   /// -------------------------------------------------------------
-  /// HANDLER 2: In-App Experience (Generations)
+  /// UI: Custom SnackBar
   /// -------------------------------------------------------------
-
-
-  // 1. Rename and modify the private handler to just parse data
-  void _handleInAppGenerationEvent(RemoteMessage message, {required bool isSuccess}) {
-
-    final int currentIndex = ref.read(bottomNavIndexProvider);
-
-    if (currentIndex == 1) {
-      debugPrint("User is on History tab. Auto-refreshing list...");
-      ref.read(generationsProvider.notifier).refresh();
-    } else {
-      debugPrint("User is on tab $currentIndex. Ignoring auto-refresh.");
-    }
-
-
-    final generationId = message.data['generation_id'];
-    // Call the new public method
-    showStatusSnackBar(
-        id: generationId?.toString(),
-        isSuccess: isSuccess
-    );
-  }
-
-  // 2. Create this NEW Public Method (Paste your styled SnackBar code here)
   void showStatusSnackBar({required String? id, required bool isSuccess}) {
     final Color bgColor = isSuccess ? const Color(0xFF00C853) : const Color(0xFFE53935);
     final IconData icon = isSuccess ? Icons.check_circle_outline : Icons.error_outline;
@@ -187,7 +253,6 @@ class NotificationService {
                   child: ElevatedButton(
                     onPressed: () {
                       scaffoldMessengerKey.currentState?.hideCurrentSnackBar();
-                      // Open the modal directly with your test ID
                       if (id != null) _openGenerationModal(id);
                     },
                     style: ElevatedButton.styleFrom(
@@ -205,44 +270,6 @@ class NotificationService {
         ),
         duration: const Duration(seconds: 4),
       ),
-    );
-  }
-
-  void _handleMessageClick(RemoteMessage message) {
-    final String? generationId = message.data['generation_id'];
-    if (generationId != null) {
-      // 1. Navigate to Home
-      navigatorKey.currentState?.pushNamedAndRemoveUntil(
-        '/home',
-        (route) => false,
-      );
-
-      // 2. Switch to History Tab (Index 1)
-      ref.read(bottomNavIndexProvider.notifier).state = 1;
-
-      // 3. Post-frame callback ensures the UI is ready before showing modal
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        // You will implement this in your HomeScreen or as a global dialog
-        _openGenerationModal(generationId);
-      });
-    }
-  }
-
-  void _openGenerationModal(String idstr) {
-    final int? id = int.tryParse(idstr);
-    if (id == null) return;
-
-    // 1. Force Navigate to History Tab
-    // We assume 'bottomNavIndexProvider' controls your Home tabs
-    ref.read(bottomNavIndexProvider.notifier).state = 1;
-
-    // 2. Ensure we are on the HomeScreen (if user was deep in settings)
-    navigatorKey.currentState?.popUntil((route) => route.isFirst);
-
-    // 3. Show the Dialog
-    showDialog(
-      context: navigatorKey.currentContext!,
-      builder: (context) => GenerationDetailDialog(generationId: id),
     );
   }
 }
